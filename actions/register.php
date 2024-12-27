@@ -3,19 +3,18 @@ require_once __DIR__ . "/../classes/Database.php";
 require_once __DIR__ . "/../classes/User.php";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  
-    $database = new Database();
-    $db = $database->getConnection();
+    $database=new Database();
+    $db=$database->getConnection();
 
-    
-    $user = new User($db);
-    $user->name = $_POST['name'];
-    $user->email = $_POST['email'];
+    $name=$_POST['name'];
+    $email=$_POST['email'];
 
-    if($user->create()) {
-        echo "Inscription réussie";
+    $user=new USER ($db, $name,$email);
+
+    if($user->create()){
+        echo "inscription réussie";
         header("Location: ../index.php");
-    } else {
+    }else{
         echo "Erreur lors de l'inscription";
     }
 }

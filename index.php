@@ -1,3 +1,42 @@
+<?php
+require_once __DIR__ . "/classes/Database.php";
+require_once __DIR__ . "/classes/Task.php";
+require_once __DIR__ . "/classes/user.php";
+
+
+$database = new Database();
+$db = $database->getConnection();
+
+$task = new Task($db, "", "", "");
+$tasks = $task->getAllTasks();
+
+$user=new User($db,"","");
+$users=$user->getAllUser();
+
+
+// $query = $db->query("SELECT id_user, name FROM users");
+// $users = $query->fetchAll(PDO::FETCH_ASSOC);
+
+// Compter les différents types de tâches
+$taskCount = 0;
+$bugCount = 0;
+$featureCount = 0;
+
+foreach($tasks as $task) {
+    switch($task['type']) {
+        case 'task':
+            $taskCount++;
+            break;
+        case 'bug':
+            $bugCount++;
+            break;
+        case 'feature':
+            $featureCount++;
+            break;
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -32,15 +71,15 @@
             <div class="statistics">
                 <div class="stat-box">
                     <h3>Tâches</h3>
-                    <span id="taskCount">0</span>
+                    <span id="taskCount"><?php echo $taskCount; ?></span>
                 </div>
                 <div class="stat-box">
                     <h3>Bugs</h3>
-                    <span id="bugCount">0</span>
+                    <span id="bugCount"><?php echo $bugCount; ?></span>
                 </div>
                 <div class="stat-box">
                     <h3>Features</h3>
-                    <span id="featureCount">0</span>
+                    <span id="featureCount"><?php echo $featureCount; ?></span>
                 </div>
             </div>
 
@@ -52,78 +91,138 @@
                 <div class="column todo">
                     <h2>À Faire</h2>
                     <div class="task-list" id="todoList">
-                        <!-- Exemple de tâche normale -->
-                        <div class="task-card task">
-                            <h3>Mettre à jour la documentation</h3>
-                            <p>Rédiger la documentation technique du projet</p>
-                            <div class="task-info">
-                                <span class="assigned-to">👤 Assigné à: 
-                                    <select class="user-select">
-                                        <option value="">Sélectionner un utilisateur</option>
-                                    </select>
-                                </span>
-                                <select class="status-select">
-                                    <option value="todo" selected>À Faire</option>
-                                    <option value="in-progress">En Cours</option>
-                                    <option value="done">Terminé</option>
-                                </select>
-                                <a href="#" class="details-link">🔍 Voir détails</a>
-                            </div>
-                        </div>
-
-                        <!-- Exemple de bug -->
-                        <div class="task-card bug">
-                            <h3>Erreur d'authentification</h3>
-                            <p>Les utilisateurs ne peuvent pas se connecter sur Firefox</p>
-                            <div class="task-info">
-                                <span class="assigned-to">👤 Assigné à: 
-                                    <select class="user-select">
-                                        <option value="">Sélectionner un utilisateur</option>
-                                    </select>
-                                </span>
-                                <span class="severity">⚠️ Sévérité: Élevée</span>
-                                <select class="status-select">
-                                    <option value="todo" selected>À Faire</option>
-                                    <option value="in-progress">En Cours</option>
-                                    <option value="done">Terminé</option>
-                                </select>
-                                <a href="#" class="details-link">🔍 Voir détails</a>
-                            </div>
-                        </div>
-
-                        <!-- Exemple de feature -->
-                        <div class="task-card feature">
-                            <h3>Mode sombre</h3>
-                            <p>Implémenter le thème sombre dans l'application</p>
-                            <div class="task-info">
-                                <span class="assigned-to">👤 Assigné à: 
-                                    <select class="user-select">
-                                        <option value="">Sélectionner un utilisateur</option>
-                                    </select>
-                                </span>
-                                <span class="priority">🎯 Priorité: Moyenne</span>
-                                <select class="status-select">
-                                    <option value="todo">À Faire</option>
-                                    <option value="in-progress" selected>En Cours</option>
-                                    <option value="done">Terminé</option>
-                                </select>
-                                <a href="#" class="details-link">🔍 Voir détails</a>
-                            </div>
-                        </div>
+                        <?php foreach($tasks as $task): ?>
+                            <?php if($task['status'] === 'to-do'): ?>
+                                <div class="task-card <?php echo $task['type']; ?>">
+                                    <h3><?php echo $task['title']; ?></h3>
+                                    <p><?php echo $task['description']; ?></p>
+                                    <div class="task-info">
+                                        <span class="assigned-to">👤 Assigné à: 
+                                            <form action="actions/assign_task.php" method="POST" style="display: inline;">
+                                                <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                                <select name="userId" onchange="this.form.submit()">
+                                                    <option value="">Sélectionner un utilisateur</option>
+                                                    <?php foreach($users as $user): ?>
+                                                        <option value="<?php echo $user['id_user']; ?>" 
+                                                            <?php echo ($user['id_user'] == $task['id_user']) ? 'selected' : ''; ?>>
+                                                            <?php echo $user['name']; ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </form>
+                                        </span>
+                                        
+                                        <?php if($task['type'] === 'bug'): ?>
+                                            <span class="severity">⚠️ Sévérité: <?php echo $task['severity']; ?></span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if($task['type'] === 'feature'): ?>
+                                            <span class="priority">🎯 Priorité: <?php echo $task['priority']; ?></span>
+                                        <?php endif; ?>
+                                        
+                                        <form action="actions/update_status.php" method="POST" style="display: inline;">
+                                            <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                            <select name="status" onchange="this.form.submit()">
+                                                <option value="to-do" <?php echo ($task['status'] === 'to-do') ? 'selected' : ''; ?>>À Faire</option>
+                                                <option value="in-progress" <?php echo ($task['status'] === 'in-progress') ? 'selected' : ''; ?>>En Cours</option>
+                                                <option value="done" <?php echo ($task['status'] === 'done') ? 'selected' : ''; ?>>Terminé</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
                 <div class="column in-progress">
                     <h2>En Cours</h2>
                     <div class="task-list" id="inProgressList">
-                        <!-- Les tâches seront ajoutées ici -->
+                        <?php foreach($tasks as $task): ?>
+                            <?php if($task['status'] === 'in-progress'): ?>
+                                <div class="task-card <?php echo $task['type']; ?>">
+                                    <h3><?php echo $task['title']; ?></h3>
+                                    <p><?php echo $task['description']; ?></p>
+                                    <div class="task-info">
+                                        <span class="assigned-to">👤 Assigné à: 
+                                            <form action="actions/assign_task.php" method="POST" style="display: inline;">
+                                                <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                                <select name="userId" onchange="this.form.submit()">
+                                                    <option value="">Sélectionner un utilisateur</option>
+                                                    <?php foreach($users as $user): ?>
+                                                        <option value="<?php echo $user['id_user']; ?>" 
+                                                            <?php echo ($user['id_user'] == $task['id_user']) ? 'selected' : ''; ?>>
+                                                            <?php echo $user['name']; ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </form>
+                                        </span>
+                                        
+                                        <?php if($task['type'] === 'bug'): ?>
+                                            <span class="severity">⚠️ Sévérité: <?php echo $task['severity']; ?></span>
+                                        <?php endif; ?>
+                                        <?php if($task['type'] === 'feature'): ?>
+                                            <span class="priority">🎯 Priorité: <?php echo $task['priority']; ?></span>
+                                        <?php endif; ?>
+                                        <form action="actions/update_status.php" method="POST" style="display: inline;">
+                                            <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                            <select name="status" onchange="this.form.submit()">
+                                                <option value="to-do" <?php echo ($task['status'] === 'to-do') ? 'selected' : ''; ?>>À Faire</option>
+                                                <option value="in-progress" <?php echo ($task['status'] === 'in-progress') ? 'selected' : ''; ?>>En Cours</option>
+                                                <option value="done" <?php echo ($task['status'] === 'done') ? 'selected' : ''; ?>>Terminé</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
                 <div class="column done">
                     <h2>Terminé</h2>
                     <div class="task-list" id="doneList">
-                        <!-- Les tâches seront ajoutées ici -->
+                        <?php foreach($tasks as $task): ?>
+                            <?php if($task['status'] === 'done'): ?>
+                                <div class="task-card <?php echo $task['type']; ?>">
+                                    <h3><?php echo $task['title']; ?></h3>
+                                    <p><?php echo $task['description']; ?></p>
+                                    <div class="task-info">
+                                        <span class="assigned-to">👤 Assigné à: 
+                                            <form action="actions/assign_task.php" method="POST" style="display: inline;">
+                                                <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                                <select name="userId" onchange="this.form.submit()">
+                                                    <option value="">Sélectionner un utilisateur</option>
+                                                    <?php foreach($users as $user): ?>
+                                                        <option value="<?php echo $user['id_user']; ?>" 
+                                                            <?php echo ($user['id_user'] == $task['id_user']) ? 'selected' : ''; ?>>
+                                                            <?php echo $user['name']; ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </form>
+                                        </span>
+                                        
+                                        <?php if($task['type'] === 'bug'): ?>
+                                            <span class="severity">⚠️ Sévérité: <?php echo $task['severity']; ?></span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if($task['type'] === 'feature'): ?>
+                                            <span class="priority">🎯 Priorité: <?php echo $task['priority']; ?></span>
+                                        <?php endif; ?>
+                                        <form action="actions/update_status.php" method="POST" style="display: inline;">
+                                            <input type="hidden" name="taskId" value="<?php echo $task['id_task']; ?>">
+                                            <select name="status" onchange="this.form.submit()">
+                                                <option value="to-do" <?php echo ($task['status'] === 'to-do') ? 'selected' : ''; ?>>À Faire</option>
+                                                <option value="in-progress" <?php echo ($task['status'] === 'in-progress') ? 'selected' : ''; ?>>En Cours</option>
+                                                <option value="done" <?php echo ($task['status'] === 'done') ? 'selected' : ''; ?>>Terminé</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -146,7 +245,7 @@
     <div id="taskModal" class="modal">
         <div class="modal-content">
             <h2>Nouvelle Tâche</h2>
-            <form id="taskForm" method="POST" action="">
+            <form id="taskForm" method="POST" action="actions/add_task.php">
                 <input type="text" name="title" placeholder="Titre" required>
                 <textarea name="description" placeholder="Description" required></textarea>
                 <select id="taskType" name="type">

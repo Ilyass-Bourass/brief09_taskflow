@@ -20,15 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
         taskModal.style.display = 'block';
     }
 
-    // Ouvrir modal détails
-    document.querySelectorAll('.details-link').forEach(link => {
-        link.onclick = function(event) {
-            event.preventDefault(); 
-            event.stopPropagation(); 
-            detailsModal.style.display = 'block';
-            console.log('Click sur détails détecté');
-        }
-    });
 
     // Fermer les modals quand on clique en dehors
     window.onclick = function(event) {

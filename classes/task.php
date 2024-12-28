@@ -2,6 +2,7 @@
 class Task{
     private $connexion;
     private $table = "tasks";
+    private $id_task;
     protected $title;
     protected $description;
     protected $typeTask;
@@ -82,6 +83,36 @@ class Task{
         
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getAllTasksUser($userId) {
+        $sql = "SELECT t.*, b.severity, f.priority 
+                FROM " . $this->table . " t 
+                LEFT JOIN bugs b ON t.id_task = b.id_task 
+                LEFT JOIN features f ON t.id_task = f.id_task 
+                WHERE t.id_user = :userId
+                ORDER BY t.created_at DESC";
+                
+        $query = $this->connexion->prepare($sql);
+        $query->execute([':userId' => $userId]);
+        
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTask($taskId) {
+        $sql = "SELECT t.*, b.severity, f.priority, u.name as assigned_to 
+                FROM tasks t 
+                LEFT JOIN bugs b ON t.id_task = b.id_task 
+                LEFT JOIN features f ON t.id_task = f.id_task 
+                LEFT JOIN users u ON t.id_user = u.id_user
+                WHERE t.id_task = :id";
+                
+        $query = $this->connexion->prepare($sql);
+        $query->execute([':id' => $taskId]);
+        
+        return $query->fetch(PDO::FETCH_ASSOC);
+    }
+
+
 
     public function assignTask($taskId, $userId) {
         $sql = "UPDATE tasks SET id_user = :userId WHERE id_task = :taskId";
